@@ -1,9 +1,14 @@
+local has_telescope = pcall(require, "telescope")
+if not has_telescope then
+	error("telescope-avante.nvim requires telescope.nvim - https://github.com/nvim-telescope/telescope.nvim")
+end
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 local pickers = require("telescope.pickers")
 local sorters = require("telescope.sorters")
 local finders = require("telescope.finders")
 local themes = require("telescope.themes")
+local conf = require("telescope.config").values
 
 local has_telescope, telescope = pcall(require, "telescope")
 if not has_telescope then
@@ -61,7 +66,7 @@ function M.avante(opts)
 		:find()
 end
 
-return telescope.register_extension({
+return require("telescope").register_extension({
 	exports = {
 		avante = M.avante,
 	},
