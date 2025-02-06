@@ -68,4 +68,8 @@ M.avante_provider_selector = function(opts)
 		:find()
 end
 
+telescope.extensions.avante_provider_selector = {
+	avante_provider_selector = M.avante_provider_selector,
+}
+
 return M
