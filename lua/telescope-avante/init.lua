@@ -61,8 +61,6 @@ function M.avante(opts)
 		:find()
 end
 
-M.avante()
-
 return telescope.register_extension({
 	exports = {
 		avante = M.avante,
