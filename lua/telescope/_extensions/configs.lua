@@ -5,6 +5,6 @@ end
 
 return require("telescope").register_extension({
 	exports = {
-		avante_provider_selector = require("telescope-avante").avante_provider_selector,
+		avante = require("telescope-avante").avante,
 	},
 })

@@ -3,6 +3,7 @@ local action_state = require("telescope.actions.state")
 local pickers = require("telescope.pickers")
 local sorters = require("telescope.sorters")
 local finders = require("telescope.finders")
+local themes = require("telescope.themes")
 
 local has_telescope, telescope = pcall(require, "telescope")
 if not has_telescope then
@@ -11,65 +12,59 @@ end
 
 local M = {}
 
-local function avante_providers()
-	local providers = {}
-	local avante_config = require("plugins.avante").opts
-	local vendors = avante_config.vendors
-
-	for name, _ in pairs(vendors) do
-		table.insert(providers, name)
-	end
-
-	return providers
+-- Get current avante provider
+local function get_current_provider()
+	return vim.g.avante_provider or ""
 end
 
-local function switch_avante_provider(prompt_bufnr)
-	local selection = action_state.get_selected_entry()
-	if not selection then
-		return
-	end
+function M.avante(opts)
+	-- Merge user opts with dropdown theme
+	opts = vim.tbl_deep_extend(
+		"force",
+		themes.get_dropdown({
+			width = 0.3,
+			previewer = false,
+			prompt_title = false,
+			results_title = false,
+			winblend = 10,
+		}),
+		opts or {}
+	)
 
-	local provider_name = selection.value
+	local current_provider = get_current_provider()
 
-	-- Update Avante configuration
-	local avante_config = require("plugins.avante").opts
-	avante_config.provider = provider_name
-
-	-- Notify the user
-	vim.notify("Avante provider switched to: " .. provider_name, vim.log.levels.INFO)
-end
-
-M.avante_provider_selector = function(opts)
-	opts = opts or {}
 	pickers
 		.new(opts, {
-			prompt_title = "Avante Provider Selector",
 			finder = finders.new_table({
-				results = avante_providers(),
-				entry_maker = function(entry)
+				results = require("avante.config").providers,
+				entry_maker = function(provider)
 					return {
-						value = entry,
-						display = entry,
-						ordinal = entry,
+						value = provider,
+						display = provider .. (provider == current_provider and " " or ""),
+						ordinal = provider,
 					}
 				end,
 			}),
-			sorter = sorters.Generic.new({}),
-			actions = {
-				["select"] = function(prompt_bufnr)
+			sorter = sorters.get_generic_fuzzy_sorter(),
+			attach_mappings = function(prompt_bufnr)
+				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
-					switch_avante_provider(prompt_bufnr)
-				end,
-				[" "] = function(prompt_bufnr)
-					actions.close(prompt_bufnr)
-				end,
-			},
+					local selection = action_state.get_selected_entry()
+					if not selection then
+						return
+					end
+					require("avante.api").switch_provider(vim.trim(selection.value))
+				end)
+				return true
+			end,
 		})
 		:find()
 end
 
-telescope.extensions.avante_provider_selector = {
-	avante_provider_selector = M.avante_provider_selector,
-}
+M.avante()
 
-return M
+return telescope.register_extension({
+	exports = {
+		avante = M.avante,
+	},
+})
