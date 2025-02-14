@@ -1,83 +1,164 @@
 ---@mod telescope-avante Telescope picker for Avante providers
 ---@brief [[
---- A telescope extension for switching between Avante providers
---- with an elegant minimal UI.
+--- A telescope extension for switching between Avante providers.
+--- Provides an elegant UI for selecting and switching AI providers.
+---
+--- Usage:
+--- ```lua
+--- require('telescope').load_extension('avante')
+--- -- Then use:
+--- :Telescope avante
+--- ```
 ---@brief ]]
+---@diagnostic disable: unused-local
 
 -- Dependencies check
 local has_telescope, telescope = pcall(require, "telescope")
 if not has_telescope then
-	error("telescope-avante.nvim requires telescope.nvim (https://github.com/nvim-telescope/telescope.nvim)")
+	error("`telescope-avante.nvim` requires `telescope.nvim` (https://github.com/nvim-telescope/telescope.nvim)")
 end
 
 local has_avante, _ = pcall(require, "avante")
 if not has_avante then
-	error("telescope-avante.nvim requires avante.nvim (https://github.com/yetone/avante.nvim)")
+	error("`telescope-avante.nvim` requires `avante.nvim` (https://github.com/yetone/avante.nvim)")
 end
 
 -- Telescope modules
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 local pickers = require("telescope.pickers")
-local sorters = require("telescope.sorters")
-local finders = require("telescope.finders")
-local themes = require("telescope.themes")
+local conf = require("telescope.config").values
+local entry_display = require("telescope.pickers.entry_display")
 
-local THEME = {
-	width = 0.25, -- 25% of screen width
-	height = 0.35, -- 35% of screen height
-	winblend = 10, -- Slight transparency
-	border = true, -- Show border
-	previewer = false, -- No previewer needed
-	prompt_title = false,
+-- Default configuration
+local defaults = {
+	theme = "dropdown",
+	previewer = false,
+	prompt_title = "Avante Providers",
 	results_title = false,
+	border = true,
+	sorting_strategy = "ascending",
+	layout_strategy = "center",
+	mappings = {
+		i = {
+			["<CR>"] = "select_default",
+			["<C-c>"] = "close",
+			["<Esc>"] = "close",
+		},
+		n = {
+			["<CR>"] = "select_default",
+			["q"] = "close",
+			["<Esc>"] = "close",
+		},
+	},
 }
+
+local function make_display(entry)
+	local displayer = entry_display.create({
+		separator = " ",
+		items = {
+			{ width = 2 }, -- Width for the checkmark
+			{ remaining = true }, -- Provider name takes remaining space
+		},
+	})
+
+	return displayer({
+		{ entry.current and "✓" or " " },
+		entry.value,
+	})
+end
 
 local M = {}
 
--- Get current avante provider with fallback
----@return string
-local function get_current_provider()
-	return vim.g.avante_provider or ""
-end
-
----@param opts table|nil
+---@param opts table|nil: Configuration options
 function M.avante(opts)
-	-- Merge user opts with our elegant theme
-	opts = vim.tbl_deep_extend("force", themes.get_dropdown(THEME), opts or {})
+	opts = vim.tbl_deep_extend("force", defaults, opts or {})
 
-	local current = get_current_provider()
+	if opts.theme then
+		if opts.theme == "dropdown" then
+			opts = vim.tbl_deep_extend("force", opts, require("telescope.themes").get_dropdown())
+		elseif opts.theme == "cursor" then
+			opts = vim.tbl_deep_extend("force", opts, require("telescope.themes").get_cursor())
+		elseif opts.theme == "ivy" then
+			opts = vim.tbl_deep_extend("force", opts, require("telescope.themes").get_ivy())
+		end
+	end
+	local results = require("avante.config").providers
+
+	-- Calculate the width based on the longest provider name
+	local max_width = 0
+	for _, provider in ipairs(results) do
+		max_width = math.max(max_width, vim.fn.strdisplaywidth(provider))
+	end
+
+	-- Set dimensions
+	opts.height = #results + 2
+	opts.width = max_width + 6 -- Add space for checkmark (2) and padding (4)
+
+	-- Add specific layout configuration
+	opts.layout_config = vim.tbl_extend("force", opts.layout_config or {}, {
+		width = opts.width,
+		height = opts.height,
+		prompt_position = "top",
+	})
+
+	local current_provider = require("avante.config").provider
 
 	pickers
 		.new(opts, {
-			finder = finders.new_table({
-				results = require("avante.config").providers,
+			prompt_title = opts.prompt_title,
+			finder = require("telescope.finders").new_table({
+				results = results,
 				entry_maker = function(provider)
 					return {
 						value = provider,
-						display = provider,
+						display = make_display,
 						ordinal = provider,
+						current = provider == current_provider,
 					}
 				end,
 			}),
-			sorter = sorters.get_generic_fuzzy_sorter(),
-			attach_mappings = function(prompt_bufnr)
+			sorter = conf.generic_sorter(opts),
+			attach_mappings = function(prompt_bufnr, map)
 				actions.select_default:replace(function()
 					local selection = action_state.get_selected_entry()
 					actions.close(prompt_bufnr)
 
-					if selection and selection.value ~= current then
+					if selection and selection.value ~= current_provider then
 						require("avante.api").switch_provider(selection.value)
 					end
 				end)
+
+				-- Add custom mappings
+				for mode, mode_mappings in pairs(opts.mappings) do
+					for key, action in pairs(mode_mappings) do
+						map(mode, key, actions[action])
+					end
+				end
+
 				return true
 			end,
+			previewer = opts.previewer,
+			sorting_strategy = opts.sorting_strategy,
+			layout_strategy = opts.layout_strategy,
+			layout_config = {
+				width = opts.width,
+				height = opts.height,
+			},
 		})
 		:find()
 end
 
+---Setup function for the extension
+---@param ext_config table: Extension configuration table
+---@param telescope_config table: Telescope configuration table
+local function setup(ext_config, telescope_config)
+	defaults = vim.tbl_deep_extend("force", defaults, ext_config or {})
+end
+
 -- Register telescope extension
 return telescope.register_extension({
+	setup = setup,
 	exports = {
 		avante = M.avante,
 	},
