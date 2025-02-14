@@ -1,55 +1,95 @@
-# telescope-avante.nvim
+# 🔭 telescope-avante.nvim
 
-A Telescope extension for [avante.nvim](https://github.com/olivercederborg/telescope-media-files.nvim) that allows you to switch avante providers.
+A minimalist [Telescope](https://github.com/nvim-telescope/telescope.nvim) picker for switching between [avante.nvim](https://github.com/yetone/avante.nvim) providers with style.
 
-## Features
+## ✨ Features
 
-- Switch avante providers using Telescope.
-- Elegant and mini picker UI.
+- 🔄 Switch between AI providers on the fly
+- 🎯 Focused, minimal picker interface
+- ✓ Visual indicator for active provider
+- 🎨 Adapts to your Telescope theme
 
-## Installation
+## 📦 Installation
 
-Install the extension with your package manager of choice:
-
-### [lazy.nvim](https://github.com/folke/lazy.nvim)
+### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 {
     'oleksiiluchnikov/telescope-avante.nvim',
     dependencies = {
         'nvim-telescope/telescope.nvim',
-        'yetone/avante.nvim' }
+        'yetone/avante.nvim'
+    },
+    cmd = 'Telescope avante',
+    keys = {
+        { '<leader>ap', '<cmd>Telescope avante<CR>', desc = 'Switch AI Provider' }
+    }
 }
 ```
 
-## Usage
+### Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
+```lua
+use {
+    'oleksiiluchnikov/telescope-avante.nvim',
+    requires = {
+        'nvim-telescope/telescope.nvim',
+        'yetone/avante.nvim'
+    }
+}
+
+```
+
+## 🚀 Usage
+
+1. Load the extension:
+
+```lua
+require('telescope').load_extension('avante')
+```
+
+2. Open the picker:
 
 ```lua
 :Telescope avante
 ```
 
-You can also add a key mapping:
+### Recommended Mapping
 
 ```lua
 vim.keymap.set('n', '<leader>ap',
-    ':Telescope avante<CR>',
-    { desc = 'Switch Avante Provider' }
+    require('telescope').extensions.avante.avante,
+    { desc = 'Switch AI Provider' }
 )
 ```
 
-## Configuration
+## ⚙️ Configuration
 
-No configuration options are available.
+The extension uses sensible defaults optimized for a clean, minimal interface. However, you can customize it through Telescope's setup:
 
-## Dependencies
+```lua
+require('telescope').setup({
+    extensions = {
+        avante = {
+            theme = 'dropdown',      -- dropdown, cursor, or ivy
+            prompt_title = 'AI Providers',
+            previewer = false,
+            border = true,
+            sorting_strategy = 'ascending',
+            layout_strategy = 'center'
+        }
+    }
+})
+```
 
-- [nvim-telescope/telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
-- [avante.nvim](https://github.com/yetone/avante.nvim)
+## 🤝 Contributing
 
-## Contributing
+Contributions are warmly welcomed! Feel free to:
 
-Contributions are welcome! Please open an issue or submit a pull request.
+- [Report bugs](https://github.com/oleksiiluchnikov/telescope-avante.nvim/issues/new?assignees=&labels=bug&template=bug_report.md)
+- [Request features](https://github.com/oleksiiluchnikov/telescope-avante.nvim/issues/new?assignees=&labels=enhancement&template=feature_request.md)
+- [Submit pull requests](https://github.com/oleksiiluchnikov/telescope-avante.nvim/pulls)
 
-## License
+## 📝 License
 
-[MIT](LICENSE)
+[MIT](https://choosealicense.com/licenses/mit/)
